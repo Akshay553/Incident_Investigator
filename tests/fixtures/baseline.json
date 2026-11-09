@@ -1,0 +1,28 @@
+{
+  "baseline-0": [{
+    "action": "investigate", "rationale": "Collect log and metric observations first",
+    "queries": [
+      {"incident_id": "inc-001", "family": "logs", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}},
+      {"incident_id": "inc-001", "family": "metrics", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}}
+    ]
+  }],
+  "baseline-1": [{
+    "action": "investigate", "rationale": "Connection waits warrant inspecting client changes and database health",
+    "hypotheses": [{"hypothesis_id": "h1", "cause_category": "connection_capacity", "causal_stage": "mechanism", "blocking_uncertainties": ["Client settings are unknown"], "claim": "Client connection capacity may be inadequate", "confidence": 0.45, "supporting_evidence_ids": ["inc-001:logs:r01", "inc-001:metrics:r01"], "assumptions": ["Samples reflect connection acquisition behavior"]}],
+    "queries": [
+      {"incident_id": "inc-001", "family": "changes", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}},
+      {"incident_id": "inc-001", "family": "dependencies", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}},
+      {"incident_id": "inc-001", "family": "historical_incidents", "time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}}
+    ]
+  }],
+  "baseline-2": [{
+    "action": "finish", "rationale": "The change timing, client waits and normal database observations support a conclusion",
+    "hypotheses": [{"hypothesis_id": "h1", "cause_category": "connection_capacity", "causal_stage": "initiating_cause", "claim": "The reduction of checkout client pool capacity from 128 to 16 caused connection acquisition waits", "confidence": 0.88, "supporting_evidence_ids": ["inc-001:changes:r01", "inc-001:logs:r01", "inc-001:metrics:r01"], "assumptions": ["Samples are representative of the alert interval"]}],
+    "report": {
+      "incident_id": "inc-001", "outcome": "ranked",
+      "hypotheses": [{"hypothesis_id": "h1", "cause_category": "connection_capacity", "causal_stage": "initiating_cause", "claim": "The reduction of checkout client pool capacity from 128 to 16 caused connection acquisition waits", "confidence": 0.88, "supporting_evidence_ids": ["inc-001:changes:r01", "inc-001:logs:r01", "inc-001:metrics:r01"], "assumptions": ["Samples are representative of the alert interval"]}],
+      "recommended_actions": ["Verify intended client settings, restore the prior pool limit if safe, and monitor connection waits"],
+      "limitations": ["Mocked execution: scripted responses, not real model reasoning"]
+    }
+  }]
+}

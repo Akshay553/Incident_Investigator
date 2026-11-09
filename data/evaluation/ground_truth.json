@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "incident_id": "inc-001",
+      "outcome": "resolved",
+      "root_cause": {"key": "database_pool_reduction", "description": "Checkout's connection pool was reduced from 128 to 16, causing connection acquisition waits despite a healthy database."},
+      "supporting_evidence_ids": ["inc-001:logs:r01", "inc-001:metrics:r01", "inc-001:changes:r01"],
+      "contradicting_evidence_ids": [],
+      "challenges": ["straightforward"]
+    },
+    {
+      "incident_id": "inc-002",
+      "outcome": "resolved",
+      "root_cause": {"key": "response_schema_regression", "description": "Orders version 2.0 omitted a required response field, causing serialization failures that stopped after rollback."},
+      "supporting_evidence_ids": ["inc-002:logs:r01", "inc-002:changes:r01", "inc-002:changes:r02", "inc-002:metrics:r02"],
+      "contradicting_evidence_ids": [],
+      "challenges": ["straightforward"]
+    },
+    {
+      "incident_id": "inc-003",
+      "outcome": "resolved",
+      "root_cause": {"key": "payment_gateway_unavailability", "description": "The external payment gateway returned 503 before an unrelated checkout asset deployment."},
+      "supporting_evidence_ids": ["inc-003:logs:r01", "inc-003:metrics:r01", "inc-003:dependencies:r02"],
+      "contradicting_evidence_ids": [],
+      "challenges": ["misleading_deployment"]
+    },
+    {
+      "incident_id": "inc-004",
+      "outcome": "resolved",
+      "root_cause": {"key": "regional_memory_limit_reduction", "description": "The reduced search-east memory limit caused OOM restarts, masked by a mostly healthy global aggregate and west region."},
+      "supporting_evidence_ids": ["inc-004:logs:r01", "inc-004:metrics:r03", "inc-004:changes:r01"],
+      "contradicting_evidence_ids": ["inc-004:metrics:r01", "inc-004:logs:r02"],
+      "challenges": ["conflicting_observations"]
+    },
+    {
+      "incident_id": "inc-005",
+      "outcome": "resolved",
+      "root_cause": {"key": "resolver_search_domain_change", "description": "Inventory's resolver domain changed to legacy.internal, producing NXDOMAIN and pricing retries; historical database incidents are not causal."},
+      "supporting_evidence_ids": ["inc-005:logs:r01", "inc-005:metrics:r01", "inc-005:changes:r01"],
+      "contradicting_evidence_ids": ["inc-005:historical_incidents:r01"],
+      "challenges": ["misleading_historical_similarity"]
+    },
+    {
+      "incident_id": "inc-006",
+      "outcome": "resolved",
+      "root_cause": {"key": "queue_visibility_timeout_reduction", "description": "A five-second delivery lease was shorter than twelve-second job processing, causing repeated deliveries and backlog."},
+      "supporting_evidence_ids": ["inc-006:changes:r01", "inc-006:metrics:r01", "inc-006:logs:r02"],
+      "contradicting_evidence_ids": [],
+      "challenges": ["incomplete_data"]
+    },
+    {
+      "incident_id": "inc-007",
+      "outcome": "resolved",
+      "root_cause": {"key": "synchronous_trace_logging_overload", "description": "Trace logging increased log volume and saturated the synchronous logging sink, blocking catalog request threads."},
+      "supporting_evidence_ids": ["inc-007:logs:r01", "inc-007:metrics:r01", "inc-007:metrics:r02", "inc-007:changes:r01"],
+      "contradicting_evidence_ids": [],
+      "challenges": ["transient_tool_failure"]
+    },
+    {
+      "incident_id": "inc-008",
+      "outcome": "resolved",
+      "root_cause": {"key": "expired_certificate_rotation", "description": "Ledger's newly selected certificate was already expired, preventing payments-to-ledger TLS handshakes."},
+      "supporting_evidence_ids": ["inc-008:logs:r01", "inc-008:changes:r01", "inc-008:dependencies:r01"],
+      "contradicting_evidence_ids": [],
+      "challenges": ["straightforward", "misleading_historical_similarity"]
+    },
+    {
+      "incident_id": "inc-009",
+      "outcome": "inconclusive",
+      "root_cause": null,
+      "supporting_evidence_ids": [],
+      "contradicting_evidence_ids": [],
+      "challenges": ["inconclusive", "incomplete_data", "misleading_historical_similarity"],
+      "reason": "Retained observations do not distinguish a database, payment dependency, or other source of intermittent deadlines. Missing spans and probe samples prohibit a supported root cause."
+    },
+    {
+      "incident_id": "inc-010",
+      "outcome": "resolved",
+      "root_cause": {"key": "request_volume_capacity_exhaustion", "description": "A twelvefold request surge exhausted API executor capacity while dependencies remained healthy and no local changes were recorded."},
+      "supporting_evidence_ids": ["inc-010:metrics:r01", "inc-010:metrics:r02", "inc-010:metrics:r03", "inc-010:logs:r01"],
+      "contradicting_evidence_ids": [],
+      "challenges": ["straightforward"]
+    }
+  ]
+}

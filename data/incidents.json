@@ -1,0 +1,380 @@
+{
+  "schema_version": 1,
+  "incidents": [
+    {
+      "context": {"incident_id": "inc-001", "alert": "Checkout latency and error alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["checkout"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "orders-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:06:00Z", "service": "checkout", "level": "error", "message": "Timed out waiting for a database connection", "attributes": {"pool_size": 16, "waiting": 47}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:07:00Z", "service": "orders-db", "level": "info", "message": "Query durations remain within the usual range", "attributes": {"p95_ms": 11}},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:02:00Z", "service": "checkout", "level": "info", "message": "Request completed", "attributes": {"duration_ms": 84}}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "orders-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:08:00Z", "service": "checkout", "name": "connection_pool_waiters", "value": 47, "unit": "connections"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:08:00Z", "service": "checkout", "name": "request_latency_p95", "value": 1450, "unit": "ms"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:08:00Z", "service": "orders-db", "name": "cpu_utilization", "value": 28, "unit": "percent"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "orders-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:03:00Z", "service": "checkout", "change_type": "configuration", "description": "Applied database client settings", "before": "max_connections=128", "after": "max_connections=16"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "orders-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:09:00Z", "service": "checkout", "target_service": "orders-db", "relationship": "storage", "status": "degraded", "observation": "Client connection acquisition waits; established database sessions respond normally"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:09:00Z", "service": "orders-db", "target_service": "volume-a", "relationship": "storage", "status": "healthy", "observation": "Read latency 3 ms"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-12-10T14:00:00Z", "service": "checkout", "summary": "A prior checkout slowdown", "symptoms": ["Connection acquisition waits", "Normal database CPU"], "resolution": "Increased the client pool from 32 to 128 and waits cleared"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-002", "alert": "Order API error alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["orders"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["orders", "inventory"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:05:00Z", "service": "orders", "level": "error", "message": "Response serialization failed: expected field total is absent", "attributes": {"version": "2.0"}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:06:00Z", "service": "inventory", "level": "info", "message": "Stock lookup returned HTTP 200"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:19:00Z", "service": "orders", "level": "info", "message": "Response serialization completed", "attributes": {"version": "1.9"}}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["orders", "inventory"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:06:00Z", "service": "orders", "name": "http_5xx_rate", "value": 42, "unit": "percent"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:20:00Z", "service": "orders", "name": "http_5xx_rate", "value": 0.1, "unit": "percent"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:06:00Z", "service": "inventory", "name": "request_latency_p95", "value": 21, "unit": "ms"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["orders", "inventory"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:04:00Z", "service": "orders", "change_type": "deployment", "description": "Rolled out order response update", "before": "version=1.9", "after": "version=2.0"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:18:00Z", "service": "orders", "change_type": "deployment", "description": "Restored previous release", "before": "version=2.0", "after": "version=1.9"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["orders"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:07:00Z", "service": "orders", "target_service": "inventory", "relationship": "sync", "status": "healthy", "observation": "Inventory responses are timely and successful"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["orders"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-11-20T09:00:00Z", "service": "orders", "summary": "A prior order error alert", "symptoms": ["Inventory HTTP 503", "Order HTTP 500"], "resolution": "Inventory capacity was increased"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-003", "alert": "Payment completion alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["checkout", "payments"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "payments"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:03:00Z", "service": "payments", "level": "error", "message": "Remote payment gateway returned HTTP 503"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:04:00Z", "service": "checkout", "level": "error", "message": "Payment completion failed", "attributes": {"version": "4.1"}},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:09:00Z", "service": "checkout", "level": "info", "message": "Serving updated checkout assets", "attributes": {"version": "4.2"}},
+          {"record_id": "r04", "timestamp": "2026-01-15T10:12:00Z", "service": "payments", "level": "error", "message": "Remote payment gateway returned HTTP 503"}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "payments"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:04:00Z", "service": "payments", "name": "gateway_failure_rate", "value": 78, "unit": "percent"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:10:00Z", "service": "checkout", "name": "payment_failure_rate", "value": 20, "unit": "percent"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:04:00Z", "service": "payments", "name": "cpu_utilization", "value": 23, "unit": "percent"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "payments"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:08:00Z", "service": "checkout", "change_type": "deployment", "description": "Updated checkout styles and static assets", "before": "version=4.1", "after": "version=4.2"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "payments"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:05:00Z", "service": "checkout", "target_service": "payments", "relationship": "sync", "status": "degraded", "observation": "Payment requests fail"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:05:00Z", "service": "payments", "target_service": "payment-gateway", "relationship": "sync", "status": "degraded", "observation": "Independent gateway probe receives HTTP 503 before the checkout rollout"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout", "payments"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-12-12T08:00:00Z", "service": "checkout", "summary": "An earlier payment completion alert", "symptoms": ["Payment failure after a frontend deployment"], "resolution": "Reverted an incorrect payment request field in checkout"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-004", "alert": "Search availability alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["search-east", "gateway"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["search-east", "search-west", "gateway"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:05:00Z", "service": "search-east", "level": "error", "message": "Container terminated: OOMKilled", "attributes": {"memory_limit_mib": 512}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:06:00Z", "service": "search-west", "level": "info", "message": "Search requests completed normally"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:06:00Z", "service": "gateway", "level": "error", "message": "Search upstream connection reset", "attributes": {"region": "east"}}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["search-east", "search-west", "gateway"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:08:00Z", "service": "gateway", "name": "global_request_error_rate", "value": 0.4, "unit": "percent"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:08:00Z", "service": "search-east", "name": "request_error_rate", "value": 37, "unit": "percent"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:08:00Z", "service": "search-east", "name": "container_restarts", "value": 12, "unit": "count"},
+          {"record_id": "r04", "timestamp": "2026-01-15T10:08:00Z", "service": "search-west", "name": "container_restarts", "value": 0, "unit": "count"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["search-east", "search-west", "gateway"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:02:00Z", "service": "search-east", "change_type": "configuration", "description": "Applied container resource settings", "before": "memory_limit=2048MiB", "after": "memory_limit=512MiB"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["gateway"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:07:00Z", "service": "gateway", "target_service": "search-east", "relationship": "sync", "status": "degraded", "observation": "Frequent connection resets"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:07:00Z", "service": "gateway", "target_service": "search-west", "relationship": "sync", "status": "healthy", "observation": "Successful requests"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["gateway", "search-east", "search-west"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-11-09T16:00:00Z", "service": "gateway", "summary": "An earlier search availability alert", "symptoms": ["Connection resets across both regions"], "resolution": "Gateway network policy was repaired"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-005", "alert": "Inventory response latency alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["inventory"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["inventory", "inventory-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:05:00Z", "service": "inventory", "level": "error", "message": "DNS lookup failed: pricing.legacy.internal NXDOMAIN"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:06:00Z", "service": "inventory-db", "level": "info", "message": "Inventory query completed", "attributes": {"duration_ms": 8}},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:07:00Z", "service": "inventory", "level": "warning", "message": "Pricing lookup retried after name resolution failure"}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["inventory", "inventory-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:08:00Z", "service": "inventory", "name": "dns_failure_rate", "value": 92, "unit": "percent"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:08:00Z", "service": "inventory-db", "name": "query_latency_p95", "value": 8, "unit": "ms"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:08:00Z", "service": "inventory", "name": "request_latency_p95", "value": 2200, "unit": "ms"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["inventory"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:03:00Z", "service": "inventory", "change_type": "configuration", "description": "Updated resolver search domains", "before": "search_domain=svc.internal", "after": "search_domain=legacy.internal"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["inventory"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:07:00Z", "service": "inventory", "target_service": "pricing", "relationship": "sync", "status": "unknown", "observation": "Health probe cannot resolve pricing.legacy.internal"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:07:00Z", "service": "inventory", "target_service": "inventory-db", "relationship": "storage", "status": "healthy", "observation": "Database responds in 8 ms; no connection waiters"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["inventory"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-12-04T11:00:00Z", "service": "inventory", "summary": "A prior inventory latency alert", "symptoms": ["Request latency 2200 ms", "Repeated request retries", "Database connection waits"], "resolution": "Increased the inventory database connection pool"},
+          {"record_id": "r02", "timestamp": "2025-11-15T12:00:00Z", "service": "inventory", "summary": "An earlier inventory response alert", "symptoms": ["Database query latency 800 ms"], "resolution": "Added a missing database index"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-006", "alert": "Worker backlog alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["worker", "job-queue"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["worker"], "gaps": [{"start": "2026-01-15T10:08:00Z", "end": "2026-01-15T10:17:00Z"}]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:06:00Z", "service": "worker", "level": "warning", "message": "Received another delivery of a job that is still running", "attributes": {"job_id": "job-42"}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:20:00Z", "service": "worker", "level": "warning", "message": "Acknowledgement rejected: delivery lease expired", "attributes": {"processing_seconds": 12}}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["worker"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:07:00Z", "service": "worker", "name": "job_processing_duration_p50", "value": 12, "unit": "seconds"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:20:00Z", "service": "worker", "name": "repeated_deliveries", "value": 1800, "unit": "count"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:20:00Z", "service": "worker", "name": "completed_jobs", "value": 2, "unit": "per_second"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["worker", "job-queue"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:03:00Z", "service": "job-queue", "change_type": "configuration", "description": "Applied queue delivery settings", "before": "visibility_timeout_seconds=60", "after": "visibility_timeout_seconds=5"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["worker"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:20:00Z", "service": "worker", "target_service": "job-queue", "relationship": "async", "status": "degraded", "observation": "Duplicate job deliveries observed; broker-side metrics were not collected"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["worker", "job-queue"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-12-21T10:00:00Z", "service": "worker", "summary": "A prior worker backlog alert", "symptoms": ["Low completion throughput", "No repeated deliveries"], "resolution": "Restored a failed worker instance"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-007", "alert": "Catalog request latency alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["catalog"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["catalog", "log-store"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:06:00Z", "service": "catalog", "level": "warning", "message": "Request thread blocked waiting for synchronous log write", "attributes": {"wait_ms": 930}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:07:00Z", "service": "log-store", "level": "warning", "message": "Write queue at capacity"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:07:00Z", "service": "catalog", "level": "info", "message": "Database query returned in 9 ms"}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["catalog", "log-store"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:08:00Z", "service": "catalog", "name": "log_events", "value": 90000, "unit": "per_second"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:08:00Z", "service": "log-store", "name": "disk_utilization", "value": 99, "unit": "percent"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:02:00Z", "service": "catalog", "name": "log_events", "value": 900, "unit": "per_second"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["catalog", "log-store"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:03:00Z", "service": "catalog", "change_type": "configuration", "description": "Updated request logging settings", "before": "log_level=info; synchronous=true", "after": "log_level=trace; synchronous=true"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["catalog"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:08:00Z", "service": "catalog", "target_service": "log-store", "relationship": "storage", "status": "degraded", "observation": "Synchronous writes wait for sink capacity"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:08:00Z", "service": "catalog", "target_service": "catalog-db", "relationship": "storage", "status": "healthy", "observation": "Read requests respond normally"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["catalog"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-11-30T13:00:00Z", "service": "catalog", "summary": "An earlier catalog latency alert", "symptoms": ["Slow queries", "Database CPU 100 percent"], "resolution": "Repaired a database query plan"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-008", "alert": "Payment service error alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["payments"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["payments", "ledger"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:05:00Z", "service": "payments", "level": "error", "message": "TLS certificate validation failed: certificate expired", "attributes": {"peer": "ledger", "not_after": "2026-01-08T00:00:00Z", "serial": "5"}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:06:00Z", "service": "ledger", "level": "warning", "message": "Peer closed TLS handshake"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:02:00Z", "service": "payments", "level": "info", "message": "Ledger request completed over TLS", "attributes": {"serial": "4"}}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["payments", "ledger"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:07:00Z", "service": "payments", "name": "tls_handshake_failure_rate", "value": 100, "unit": "percent"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:07:00Z", "service": "ledger", "name": "cpu_utilization", "value": 22, "unit": "percent"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["payments", "ledger"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:04:00Z", "service": "ledger", "change_type": "configuration", "description": "Rotated service certificate", "before": "certificate_serial=4", "after": "certificate_serial=5"}
+        ]
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["payments"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:06:00Z", "service": "payments", "target_service": "ledger", "relationship": "sync", "status": "degraded", "observation": "TCP connects; TLS validation fails before application requests are sent"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["payments"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-12-01T07:00:00Z", "service": "payments", "summary": "An earlier payment error alert", "symptoms": ["TLS handshakes failed", "No shared cipher"], "resolution": "Restored compatible cipher suites"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-009", "alert": "Checkout response time alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["checkout"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout"], "gaps": [{"start": "2026-01-15T10:04:00Z", "end": "2026-01-15T10:23:00Z"}]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:02:00Z", "service": "checkout", "level": "info", "message": "Request completed", "attributes": {"duration_ms": 81}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:24:00Z", "service": "checkout", "level": "warning", "message": "Request exceeded deadline; dependency spans not retained"}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:25:00Z", "service": "checkout", "name": "window_aggregate_request_latency_p95", "value": 350, "unit": "ms"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:25:00Z", "service": "checkout", "name": "window_aggregate_request_error_rate", "value": 1.2, "unit": "percent"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout"]},
+        "records": []
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:25:00Z", "service": "checkout", "target_service": "orders-db", "relationship": "storage", "status": "unknown", "observation": "Dependency known from configuration; no health probe sample retained"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:25:00Z", "service": "checkout", "target_service": "payments", "relationship": "sync", "status": "unknown", "observation": "Dependency known from configuration; no health probe sample retained"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["checkout"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-12-09T06:00:00Z", "service": "checkout", "summary": "A prior checkout response alert", "symptoms": ["Intermittent deadlines", "Database query waits"], "resolution": "Repaired a slow database query"},
+          {"record_id": "r02", "timestamp": "2025-11-18T06:00:00Z", "service": "checkout", "summary": "An earlier checkout response alert", "symptoms": ["Intermittent deadlines", "Payment upstream timeout"], "resolution": "Payment upstream recovered"}
+        ]
+      }
+    },
+    {
+      "context": {"incident_id": "inc-010", "alert": "API request latency alert", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "affected_services": ["api"]},
+      "logs": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["api", "api-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:06:00Z", "service": "api", "level": "warning", "message": "Request executor queue at capacity; rejecting new work", "attributes": {"workers": 8}},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:07:00Z", "service": "api-db", "level": "info", "message": "Database request completed", "attributes": {"duration_ms": 7}},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:02:00Z", "service": "api", "level": "info", "message": "Request queue empty", "attributes": {"workers": 8}}
+        ]
+      },
+      "metrics": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["api", "api-db"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:02:00Z", "service": "api", "name": "incoming_requests", "value": 1000, "unit": "per_second"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:05:00Z", "service": "api", "name": "incoming_requests", "value": 12000, "unit": "per_second"},
+          {"record_id": "r03", "timestamp": "2026-01-15T10:07:00Z", "service": "api", "name": "cpu_utilization", "value": 99, "unit": "percent"},
+          {"record_id": "r04", "timestamp": "2026-01-15T10:07:00Z", "service": "api", "name": "request_executor_queue", "value": 4000, "unit": "requests"}
+        ]
+      },
+      "changes": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["api", "api-db"]},
+        "records": []
+      },
+      "dependencies": {
+        "coverage": {"time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["api"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2026-01-15T10:08:00Z", "service": "api", "target_service": "api-db", "relationship": "storage", "status": "healthy", "observation": "Database query latency 7 ms"},
+          {"record_id": "r02", "timestamp": "2026-01-15T10:08:00Z", "service": "api", "target_service": "cache", "relationship": "sync", "status": "healthy", "observation": "Cache hit rate and latency unchanged"}
+        ]
+      },
+      "historical_incidents": {
+        "coverage": {"time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}, "services": ["api"]},
+        "records": [
+          {"record_id": "r01", "timestamp": "2025-12-19T15:00:00Z", "service": "api", "summary": "An earlier API latency alert", "symptoms": ["High request volume", "Executor queue growth"], "resolution": "Increased request executor capacity after checking upstream health"}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "incident-investigation"
+version = "0.1.0"
+description = "Offline foundation for a multi-agent incident investigation assignment"
+requires-python = ">=3.11"
+dependencies = ["pydantic>=2.10,<3", "openai>=2.0,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+
+[tool.setuptools]
+py-modules = ["models", "tools", "investigation", "cli", "agents", "baseline", "llm", "evaluate"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"

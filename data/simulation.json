@@ -1,0 +1,6 @@
+{
+  "latency_ms": 5,
+  "failures": [
+    {"incident_id": "inc-007", "family": "metrics", "failures": 1, "retryable": true}
+  ]
+}

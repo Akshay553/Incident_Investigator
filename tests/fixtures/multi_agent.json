@@ -1,0 +1,64 @@
+{
+  "plan": [{
+    "rationale": "Collect independent operational observations; inspect the earliest client settings interval first.",
+    "tasks": [
+      {"task_id": "initial-logs", "role": "observability", "query": {"incident_id": "inc-001", "family": "logs", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}}},
+      {"task_id": "initial-metrics", "role": "observability", "query": {"incident_id": "inc-001", "family": "metrics", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}}},
+      {"task_id": "initial-changes", "role": "dependency", "query": {"incident_id": "inc-001", "family": "changes", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:03:00Z"}}},
+      {"task_id": "initial-dependencies", "role": "dependency", "query": {"incident_id": "inc-001", "family": "dependencies", "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}}},
+      {"task_id": "initial-history", "role": "dependency", "query": {"incident_id": "inc-001", "family": "historical_incidents", "time_range": {"start": "2025-10-17T10:00:00Z", "end": "2026-01-15T10:30:00Z"}}}
+    ]
+  }],
+  "observability-0": [{
+    "task_id": "observability-0", "role": "observability",
+    "findings": [{"claim": "Client connection waits occur while database CPU remains low", "supporting_evidence_ids": ["inc-001:logs:r01", "inc-001:metrics:r01", "inc-001:metrics:r03"]}]
+  }],
+  "dependency-0": [{
+    "task_id": "dependency-0", "role": "dependency",
+    "findings": [{"claim": "Established database sessions respond normally", "supporting_evidence_ids": ["inc-001:dependencies:r01"]}],
+    "limitations": ["The initial change query covers only the first three minutes"]
+  }],
+  "reasoning-0": [{
+    "task_id": "reasoning-0", "role": "reasoning",
+    "hypotheses": [
+      {"hypothesis_id": "h1", "cause_category": "connection_capacity", "causal_stage": "mechanism", "blocking_uncertainties": ["Current client settings have not been verified"], "claim": "Client connection capacity may be inadequate", "confidence": 0.45, "supporting_evidence_ids": ["inc-001:logs:r01", "inc-001:metrics:r01"], "assumptions": ["Samples reflect connection acquisition behavior"]},
+      {"hypothesis_id": "h2", "causal_stage": "unknown", "claim": "Database processing may be slow", "confidence": 0.15, "contradicting_evidence_ids": ["inc-001:logs:r02", "inc-001:metrics:r03"], "assumptions": ["A database issue might not appear in sampled CPU"]}
+    ]
+  }],
+  "critic-0": [{
+    "task_id": "critic-0", "role": "critic",
+    "objections": [{"hypothesis_id": "h1", "reason": "The initial change query ends before the observed waits; inspect settings changes through the alert interval", "evidence_ids": ["inc-001:logs:r01"], "critical": true, "follow_up_indices": [0]}],
+    "follow_ups": [{
+      "target_role": "dependency",
+      "query": {"incident_id": "inc-001", "family": "changes", "services": ["checkout"], "time_range": {"start": "2026-01-15T10:00:00Z", "end": "2026-01-15T10:30:00Z"}},
+      "rationale": "Determine whether client settings changed between the initial sample and connection waits",
+      "evidence_ids": ["inc-001:logs:r01"],
+      "depends_on": ["reasoning-0"]
+    }]
+  }],
+  "decision-0": [{
+    "action": "continue", "rationale": "The proposed change query can distinguish client configuration from database load", "selected_follow_ups": [0]
+  }],
+  "dependency-1": [{
+    "task_id": "dependency-1", "role": "dependency",
+    "findings": [{"claim": "Client pool settings were reduced before the waits", "supporting_evidence_ids": ["inc-001:changes:r01", "inc-001:logs:r01"]}]
+  }],
+  "reasoning-1": [{
+    "task_id": "reasoning-1", "role": "reasoning",
+    "findings": [{"claim": "The new configuration observation resolves the earlier uncertainty", "supporting_evidence_ids": ["inc-001:changes:r01"]}],
+    "hypotheses": [{"hypothesis_id": "h1", "cause_category": "connection_capacity", "causal_stage": "initiating_cause", "claim": "The reduction of checkout client pool capacity from 128 to 16 caused connection acquisition waits", "confidence": 0.88, "supporting_evidence_ids": ["inc-001:changes:r01", "inc-001:logs:r01", "inc-001:metrics:r01"], "assumptions": ["Samples are representative of the alert interval"]}]
+  }],
+  "critic-1": [{
+    "task_id": "critic-1", "role": "critic",
+    "limitations": ["No mitigation experiment has confirmed recovery"]
+  }],
+  "decision-1": [{
+    "action": "finish", "rationale": "The new observation and timing support a ranked explanation; no additional query is justified"
+  }],
+  "report": [{
+    "incident_id": "inc-001", "outcome": "ranked",
+    "hypotheses": [{"hypothesis_id": "h1", "cause_category": "connection_capacity", "causal_stage": "initiating_cause", "claim": "The reduction of checkout client pool capacity from 128 to 16 caused connection acquisition waits", "confidence": 0.88, "supporting_evidence_ids": ["inc-001:changes:r01", "inc-001:logs:r01", "inc-001:metrics:r01"], "assumptions": ["Samples are representative of the alert interval"]}],
+    "recommended_actions": ["Verify intended client settings, restore the prior pool limit if safe, and monitor connection waits"],
+    "limitations": ["Mocked execution: scripted responses, not real model reasoning", "No mitigation experiment has confirmed recovery"]
+  }]
+}

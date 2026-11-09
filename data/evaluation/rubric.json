@@ -1,0 +1,91 @@
+{
+  "version": "limited-facts-v1",
+  "cases": [
+    {
+      "incident_id": "inc-001", "expected_category": "connection_capacity",
+      "required_fact_ids": ["pool_reduction"],
+      "facts": [
+        {"fact_id": "pool_reduction", "patterns": ["\\b(pool|connection capacity|connection limit)\\b", "\\b(reduc\\w*|lower\\w*|decreas\\w*|128\\D+16)\\b"], "reject_patterns": ["\\b(not|never)\\s+(\\w+\\s+){0,3}(reduc\\w*|lower\\w*|decreas\\w*)"], "supporting_evidence_sets": [["inc-001:changes:r01"]]},
+        {"fact_id": "connection_waits", "patterns": ["\\b(connection|pool)\\b", "\\b(wait\\w*|acquisition|exhaust\\w*|bottleneck|inadequate)\\b"], "supporting_evidence_sets": [["inc-001:logs:r01"], ["inc-001:metrics:r01"]]},
+        {"fact_id": "database_normal", "patterns": ["\\b(database|db)\\b", "\\b(normal|healthy|low|fast)\\b"], "supporting_evidence_sets": [["inc-001:logs:r02"], ["inc-001:metrics:r03"]]}
+      ]
+    },
+    {
+      "incident_id": "inc-002", "expected_category": "response_contract",
+      "required_fact_ids": ["response_field_missing"],
+      "facts": [
+        {"fact_id": "response_field_missing", "patterns": ["\\b(response|serializ\\w*|schema|field)\\b", "\\b(missing|absent|omitt\\w*|drop\\w*|regress\\w*|incompat\\w*)\\b"], "reject_patterns": ["\\b(not|never)\\s+(\\w+\\s+){0,3}(missing|absent|omitt\\w*|drop\\w*)"], "supporting_evidence_sets": [["inc-002:logs:r01"]]},
+        {"fact_id": "version_change", "patterns": ["\\b(2\\.0|new release|deployment|rollout)\\b"], "supporting_evidence_sets": [["inc-002:changes:r01"]]},
+        {"fact_id": "rollback_recovery", "patterns": ["\\b(rollback|revert\\w*|restor\\w*)\\b", "\\b(recover\\w*|stop\\w*|clear\\w*|improv\\w*)\\b"], "supporting_evidence_sets": [["inc-002:changes:r02", "inc-002:metrics:r02"]]}
+      ]
+    },
+    {
+      "incident_id": "inc-003", "expected_category": "upstream_availability",
+      "required_fact_ids": ["gateway_unavailable"],
+      "facts": [
+        {"fact_id": "gateway_unavailable", "patterns": ["\\bgateway\\b", "\\b(unavail\\w*|503|fail\\w*|outage)\\b"], "reject_patterns": ["\\bgateway\\s+(was\\s+)?(healthy|available)\\b"], "supporting_evidence_sets": [["inc-003:logs:r01"], ["inc-003:metrics:r01"], ["inc-003:dependencies:r02"]]},
+        {"fact_id": "deployment_caused_failures", "patterns": ["\\b(checkout|asset|frontend)\\b", "\\b(deploy\\w*|rollout)\\b", "\\b(caus\\w*|trigger\\w*)\\b"], "supporting_evidence_sets": [], "contradicting_evidence_ids": ["inc-003:logs:r01", "inc-003:logs:r02", "inc-003:dependencies:r02"]}
+      ]
+    },
+    {
+      "incident_id": "inc-004", "expected_category": "memory_capacity",
+      "required_fact_ids": ["east_memory_limit"],
+      "facts": [
+        {"fact_id": "east_memory_limit", "patterns": ["\\beast\\b", "\\bmemory\\b", "\\b(reduc\\w*|lower\\w*|decreas\\w*|512)\\b"], "supporting_evidence_sets": [["inc-004:changes:r01"]]},
+        {"fact_id": "east_oom", "patterns": ["\\beast\\b", "\\b(oom\\w*|out.of.memory|restart\\w*|kill\\w*)\\b"], "supporting_evidence_sets": [["inc-004:logs:r01"], ["inc-004:metrics:r03"]]},
+        {"fact_id": "all_regions_failed", "patterns": ["\\b(all|both|every)\\b", "\\b(region\\w*|search)\\b", "\\b(fail\\w*|outage|unavailable)\\b"], "supporting_evidence_sets": [], "contradicting_evidence_ids": ["inc-004:logs:r02"]}
+      ]
+    },
+    {
+      "incident_id": "inc-005", "expected_category": "name_resolution",
+      "required_fact_ids": ["resolver_domain_change"],
+      "facts": [
+        {"fact_id": "resolver_domain_change", "patterns": ["\\b(dns|resolver|search domain|resolution)\\b", "\\b(legacy|domain|configuration)\\b", "\\b(chang\\w*|wrong|incorrect|misconfig\\w*|legacy)\\b"], "supporting_evidence_sets": [["inc-005:changes:r01"]]},
+        {"fact_id": "dns_failure", "patterns": ["\\b(dns|resolv\\w*|nxdomain|resolution)\\b", "\\b(fail\\w*|nxdomain|retry\\w*|retries)\\b"], "supporting_evidence_sets": [["inc-005:logs:r01"], ["inc-005:metrics:r01"], ["inc-005:dependencies:r01"]]},
+        {"fact_id": "database_slow", "patterns": ["\\b(database|db)\\b", "\\b(slow|saturat\\w*|exhaust\\w*)\\b"], "supporting_evidence_sets": [], "contradicting_evidence_ids": ["inc-005:logs:r02", "inc-005:metrics:r02", "inc-005:dependencies:r02"]}
+      ]
+    },
+    {
+      "incident_id": "inc-006", "expected_category": "queue_delivery",
+      "required_fact_ids": ["lease_too_short"],
+      "facts": [
+        {"fact_id": "lease_too_short", "patterns": ["\\b(lease|visibility|delivery timeout)\\b", "\\b(short\\w*|reduc\\w*|5|five)\\b"], "supporting_evidence_sets": [["inc-006:changes:r01", "inc-006:metrics:r01"]]},
+        {"fact_id": "repeated_delivery", "patterns": ["\\b(duplicate|repeat\\w*|redeliver\\w*|expired)\\b", "\\b(deliver\\w*|job\\w*|lease|acknowledg\\w*)\\b"], "supporting_evidence_sets": [["inc-006:logs:r01"], ["inc-006:logs:r02"], ["inc-006:metrics:r02"]]}
+      ]
+    },
+    {
+      "incident_id": "inc-007", "expected_category": "logging_backpressure",
+      "required_fact_ids": ["trace_logging_blocks"],
+      "facts": [
+        {"fact_id": "trace_logging_blocks", "patterns": ["\\b(trace|verbose)\\b", "\\blog\\w*\\b", "\\b(block\\w*|saturat\\w*|overload\\w*|backpressure)\\b"], "supporting_evidence_sets": [["inc-007:changes:r01", "inc-007:logs:r01"]]},
+        {"fact_id": "log_volume", "patterns": ["\\blog\\w*\\b", "\\b(volume|increas\\w*|flood\\w*|90000|90,000)\\b"], "supporting_evidence_sets": [["inc-007:metrics:r01", "inc-007:metrics:r03"]]},
+        {"fact_id": "sink_saturated", "patterns": ["\\b(sink|disk|log.store|logging)\\b", "\\b(saturat\\w*|capacity|99|full)\\b"], "supporting_evidence_sets": [["inc-007:metrics:r02"], ["inc-007:logs:r02"]]}
+      ]
+    },
+    {
+      "incident_id": "inc-008", "expected_category": "tls_validation",
+      "required_fact_ids": ["expired_certificate"],
+      "facts": [
+        {"fact_id": "expired_certificate", "patterns": ["\\b(certificate|cert)\\b", "\\b(expired|expiry|expiration)\\b"], "reject_patterns": ["\\b(not|never)\\s+(\\w+\\s+){0,2}expired\\b"], "supporting_evidence_sets": [["inc-008:logs:r01"]]},
+        {"fact_id": "certificate_rotation", "patterns": ["\\b(certificate|cert)\\b", "\\b(rotat\\w*|new|selected|serial.5)\\b"], "supporting_evidence_sets": [["inc-008:changes:r01"]]},
+        {"fact_id": "tls_failure", "patterns": ["\\b(tls|handshake|validation)\\b", "\\b(fail\\w*|prevent\\w*|reject\\w*)\\b"], "supporting_evidence_sets": [["inc-008:logs:r01"], ["inc-008:dependencies:r01"]]}
+      ]
+    },
+    {
+      "incident_id": "inc-009", "expected_category": "unknown",
+      "required_fact_ids": [],
+      "abstention_patterns": ["\\b(missing|insufficient|incomplete|unobserved)\\b", "cannot.{0,40}(distinguish|determine|identify)", "\\b(no|unavailable)\\b.{0,30}\\b(spans|traces|probe|evidence)\\b"],
+      "facts": [
+        {"fact_id": "deadline_observed", "patterns": ["\\b(deadline|timeout|time.out)\\b"], "supporting_evidence_sets": [["inc-009:logs:r02"]]}
+      ]
+    },
+    {
+      "incident_id": "inc-010", "expected_category": "request_capacity",
+      "required_fact_ids": ["traffic_capacity"],
+      "facts": [
+        {"fact_id": "traffic_capacity", "patterns": ["\\b(traffic|request\\w*|load)\\b", "\\b(surge|spike|increas\\w*|twelve\\w*|12)\\b", "\\b(execut\\w*|thread\\w*|capacity|saturat\\w*|exhaust\\w*)\\b"], "supporting_evidence_sets": [["inc-010:metrics:r01", "inc-010:metrics:r02", "inc-010:logs:r01"]]},
+        {"fact_id": "executor_queue", "patterns": ["\\b(execut\\w*|request|thread\\w*)\\b", "\\b(queue|capacity|reject\\w*|exhaust\\w*)\\b"], "supporting_evidence_sets": [["inc-010:logs:r01"], ["inc-010:metrics:r04"], ["inc-010:metrics:r03"]]}
+      ]
+    }
+  ]
+}
