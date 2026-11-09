@@ -164,22 +164,6 @@ initiating change or correct service attribution.
 external blind holdout. One run per case does not establish repeatability or
 statistical significance. No suggested production action was executed.
 
-## Evidence and provenance
-
-- New multi-agent metrics were checked against
-  `outputs\rerun-multi-agent-improved-20261109\results.json` and `results.csv`.
-  All ten cases have retained `report.json` and `trace.json` artifacts.
-- The new manifest records live execution, settings, dependency versions,
-  data/rubric hashes and the measured implementation hashes. The batch completed
-  all ten requested runs with no batch-wide stop.
-- Baseline metrics and original multi-agent context are taken from the
-  [benchmark summary at commit `14fb3b7`](https://github.com/Akshay553/Incident_Investigator/blob/14fb3b7444b69d6842a7694f081f8886ffa93969/README.md)
-  and [TECHNICAL-NOTE.md](TECHNICAL-NOTE.md). The baseline was not re-executed or
-  independently rescored while preparing this report.
-- The original benchmark was not rewritten, and the new observations were not
-  pooled into its metrics. This report is self-contained; rendering it on GitHub
-  does not require the ignored runtime-artifact directories.
-
 ## Conclusion
 
 The new multi-agent evaluation shows **better observed execution reliability

@@ -50,7 +50,16 @@ An inconclusive report is not necessarily an execution failure; inspect the
 trace's termination reason. Tools are read-only, and recommendations are
 advisory: no production changes are executed.
 
+## Demo video
+
+[Watch the narrated demo (2 minutes)](demo/incident-investigator-demo.mp4).
+
+The demo introduces the project, shows actual offline CLI execution and OpenAI
+integration using a saved live run, and summarizes the final
+[evaluation results](EVALUATION-RESULTS.md). No new API calls were made for the demo.
+
 ## Documentation
 
 - [Evaluation results](EVALUATION-RESULTS.md): approach comparison, per-incident outcomes, and scoring limitations.
-- [Technical note](TECHNICAL-NOTE.md): architecture, coordination, and design tradeoffs.
+- [Technical note](TECHNICAL-NOTE.md): architecture diagram, agent coordination, and design tradeoffs.
+- [Coding-assistant transcript](transcript/coding-assistant-transcript.md): recorded project-development conversation.
