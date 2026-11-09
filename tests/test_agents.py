@@ -146,10 +146,13 @@ def test_reporting_cannot_add_evidence_or_change_reasoning(tools, catalog, chang
         hypothesis["claim"] = "An unsupported replacement diagnosis"
     else:
         hypothesis["confidence"] = 0.99
-    run, _ = multi(tools, catalog, responses)
+    if change != "evidence":
+        responses["report"].append(copy.deepcopy(responses["report"][0]))
+    run, llm = multi(tools, catalog, responses)
     assert run.report.outcome == "inconclusive"
     assert run.trace.termination_reason == "reporting_unavailable"
     assert run.trace.failures[-1].code == "invalid_response"
+    assert llm.calls.count("report") == (1 if change == "evidence" else 2)
     assert any("runtime fallback" in item for item in run.report.limitations)
 
 

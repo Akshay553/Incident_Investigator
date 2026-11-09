@@ -256,7 +256,7 @@ class InvestigationState:
             references.update(follow_up.evidence_ids)
         if not references <= self._evidence.keys():
             raise ValueError("agent result references evidence not present in shared state")
-        self._agent_results[result.task_id] = result
+        self._agent_results[result.task_id] = AgentResult.model_validate(result.model_dump())
         self._replace_task(result.task_id, output_json=result.model_dump_json())
 
     def record_model_output(self, task_id: str, output: Contract) -> None:
@@ -601,6 +601,7 @@ class Coordinator:
 
     def validate_response_correction(
         self, rejected_json: str, rejected_output: Contract | None, corrected: Contract,
+        *, current_hypotheses: Sequence[dict] | None = None,
     ) -> None:
         if isinstance(corrected, InitialPlan):
             prior = {item["task_id"]: TaskSpec.model_validate(item)
@@ -611,7 +612,23 @@ class Coordinator:
             ):
                 raise ValueError("plan correction may fix ownership, not replace tasks or queries")
             return
+        if isinstance(corrected, InvestigationReport):
+            if current_hypotheses is None:
+                raise ValueError("Reporting correction requires authoritative accepted hypotheses")
+            self.report_validation(
+                corrected, tuple(Hypothesis.model_validate(item) for item in current_hypotheses),
+            )
+            return
         rejected_data = json.loads(rejected_json)
+        if isinstance(corrected, AgentResult) and corrected.role == Role.CRITIC:
+            old_objections = AgentResult.model_validate_json(rejected_json).objections
+            if len(old_objections) != len(corrected.objections) or any(
+                getattr(old, field) != getattr(item, field)
+                for old, item in zip(old_objections, corrected.objections)
+                for field in ("hypothesis_id", "reason", "evidence_ids", "critical")
+            ):
+                raise ValueError("Critic correction must preserve objections, evidence and critical judgments")
+            return
         prior = {item["hypothesis_id"]: Hypothesis.model_validate(item)
                  for item in rejected_data.get("hypotheses", ())}
         hypotheses = getattr(corrected, "hypotheses", ())
@@ -679,7 +696,7 @@ class Coordinator:
 
     async def model_batch(self, *operations: ModelOperation) -> dict[str, Contract | None]:
         """Reserve and commit on the coordinator; workers never see mutable state."""
-        from agents import CORRECTION_INSTRUCTIONS, SCHEMAS, prompt
+        from agents import CORRECTION_INSTRUCTIONS, CORRECTION_RULES, SCHEMAS, prompt
 
         for op in operations:
             self.state.add_tasks(TaskSpec(
@@ -774,7 +791,10 @@ class Coordinator:
                             )
                             if op.task_id in corrections:
                                 _, rejected, rejected_output = corrections[op.task_id]
-                                self.validate_response_correction(rejected, rejected_output, output)
+                                self.validate_response_correction(
+                                    rejected, rejected_output, output,
+                                    current_hypotheses=(op.extra or {}).get("current_hypotheses"),
+                                )
                             if self.state.remaining_seconds <= 0:
                                 raise BudgetExceeded("investigation time budget exhausted")
                             self.state.record_model_output(op.task_id, output)
@@ -826,7 +846,7 @@ class Coordinator:
                                     correction_error.already_executed_queries,
                                 )
                             prompts[op.task_id] = (
-                                system + "\n\n" + CORRECTION_INSTRUCTIONS,
+                                system + "\n\n" + CORRECTION_INSTRUCTIONS + "\n" + CORRECTION_RULES[op.purpose],
                                 json.dumps(payload, ensure_ascii=True, separators=(",", ":")),
                             )
                             pending.append(op)
@@ -911,7 +931,7 @@ class Coordinator:
         def unchanged():
             violations = []
             if report.incident_id != self.context.incident_id:
-                violations.append(f"{path}incident_id: report belongs to another incident")
+                raise ValueError(f"{path}incident_id: report belongs to another incident")
             prior = {item.hypothesis_id: item for item in hypotheses}
             for index, item in enumerate(report.hypotheses):
                 if prior.get(item.hypothesis_id) != item:
@@ -921,7 +941,7 @@ class Coordinator:
             if report.outcome == "ranked" and (not hypotheses or report.hypotheses[0] != hypotheses[0]):
                 violations.append(f"{path}hypotheses[0]: Reporting must retain the top-ranked Reasoning hypothesis")
             if violations:
-                raise ValueError("\n".join(violations))
+                raise CorrectableResponseError(violations)
 
         validate_all(
             lambda: self.check_references(report, path=path), unchanged,
@@ -1090,18 +1110,35 @@ async def _multi_agent(coordinator: Coordinator) -> InvestigationRun:
             ids = {item.hypothesis_id for item in latest.hypotheses} | {"analysis"}
             if any(item.hypothesis_id not in ids for item in output.objections):
                 raise ValueError("Critic objected to an unknown hypothesis")
-            for item in output.objections:
-                _validate_indices(item.follow_up_indices, len(output.follow_ups))
-                if len(set(item.follow_up_indices)) != len(item.follow_up_indices):
-                    raise ValueError("objection follow-up indices must be unique")
-                if item.critical and not item.follow_up_indices and not (
-                    item.unavailable_reason and item.unavailable_reason.strip()
-                ):
-                    raise ValueError("critical objection requires a targeted query or unavailable_reason")
-            validate_all(*(lambda request=request, index=index: coordinator.validate_query(
-                request.query, request.target_role, retry=request.retry_failed_query,
-                path=f"follow_ups[{index}].query",
-            ) for index, request in enumerate(output.follow_ups)))
+            def check_objections():
+                violations = []
+                for index, item in enumerate(output.objections):
+                    path = f"objections[{index}]"
+                    try:
+                        _validate_indices(
+                            item.follow_up_indices, len(output.follow_ups),
+                            path=f"{path}.follow_up_indices",
+                        )
+                    except CorrectableResponseError as exc:
+                        violations.extend(exc.violations)
+                    if len(set(item.follow_up_indices)) != len(item.follow_up_indices):
+                        violations.append(f"{path}.follow_up_indices: objection follow-up indices must be unique")
+                    if item.critical and not item.follow_up_indices and not (
+                        item.unavailable_reason and item.unavailable_reason.strip()
+                    ):
+                        violations.append(
+                            f"{path}: critical objection requires a targeted query or unavailable_reason"
+                        )
+                if violations:
+                    raise CorrectableResponseError(violations)
+
+            validate_all(
+                check_objections,
+                *(lambda request=request, index=index: coordinator.validate_query(
+                    request.query, request.target_role, retry=request.retry_failed_query,
+                    path=f"follow_ups[{index}].query",
+                ) for index, request in enumerate(output.follow_ups)),
+            )
 
         revised_critic = await coordinator.model(ModelOperation(
             critic_id, Role.CRITIC, Role.CRITIC, depends_on=(reasoning_id,),
@@ -1129,13 +1166,22 @@ async def _multi_agent(coordinator: Coordinator) -> InvestigationRun:
             break
 
         def validate_decision(output):
-            _validate_indices(output.selected_follow_ups, len(critic.follow_ups))
             deferred = {item.follow_up_index for item in output.deferred_follow_ups}
-            _validate_indices(deferred, len(critic.follow_ups))
-            if set(output.selected_follow_ups) | deferred != set(range(len(critic.follow_ups))):
-                raise ValueError("every omitted Critic query requires an explicit deferral reason")
-            if any(not item.reason.strip() for item in output.deferred_follow_ups):
-                raise ValueError("deferral reason must explain why evidence cannot be investigated")
+
+            def check_dispositions():
+                violations = []
+                if set(output.selected_follow_ups) | deferred != set(range(len(critic.follow_ups))):
+                    violations.append("every omitted Critic query requires an explicit deferral reason")
+                if any(not item.reason.strip() for item in output.deferred_follow_ups):
+                    violations.append("deferral reason must explain why evidence cannot be investigated")
+                if violations:
+                    raise CorrectableResponseError(violations)
+
+            validate_all(
+                lambda: _validate_indices(output.selected_follow_ups, len(critic.follow_ups)),
+                lambda: _validate_indices(deferred, len(critic.follow_ups), path="deferred_follow_ups"),
+                check_dispositions,
+            )
 
         decision_id = f"decision-{round_index}"
         if not critic.follow_ups:
@@ -1274,6 +1320,7 @@ async def _multi_agent(coordinator: Coordinator) -> InvestigationRun:
     )
 
 
-def _validate_indices(indices, length):
-    if any(index >= length for index in indices):
-        raise ValueError("Orchestrator selected an unknown Critic follow-up")
+def _validate_indices(indices, length, *, path="selected_follow_ups"):
+    if any(index < 0 or index >= length for index in indices):
+        valid = f"valid indices are 0 through {length - 1}" if length else "the current list is empty; indices must be empty"
+        raise CorrectableResponseError(f"{path}: unknown Critic follow-up; {valid}")

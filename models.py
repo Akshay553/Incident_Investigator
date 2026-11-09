@@ -383,6 +383,31 @@ class AgentResult(Contract):
     objections: tuple[Objection, ...] = ()
 
 
+class ObservabilityResult(AgentResult):
+    role: Literal[Role.OBSERVABILITY]
+    hypotheses: tuple[Hypothesis, ...] = Field(default=(), max_length=0)
+    follow_ups: tuple[FollowUpRequest, ...] = Field(default=(), max_length=0)
+    objections: tuple[Objection, ...] = Field(default=(), max_length=0)
+
+
+class DependencyResult(AgentResult):
+    role: Literal[Role.DEPENDENCY]
+    hypotheses: tuple[Hypothesis, ...] = Field(default=(), max_length=0)
+    follow_ups: tuple[FollowUpRequest, ...] = Field(default=(), max_length=0)
+    objections: tuple[Objection, ...] = Field(default=(), max_length=0)
+
+
+class ReasoningResult(AgentResult):
+    role: Literal[Role.REASONING]
+    follow_ups: tuple[FollowUpRequest, ...] = Field(default=(), max_length=0)
+    objections: tuple[Objection, ...] = Field(default=(), max_length=0)
+
+
+class CriticResult(AgentResult):
+    role: Literal[Role.CRITIC]
+    hypotheses: tuple[Hypothesis, ...] = Field(default=(), max_length=0)
+
+
 class InvestigationReport(Contract):
     incident_id: str = Field(pattern=r"^inc-[0-9]{3}$")
     outcome: Literal["ranked", "inconclusive"]

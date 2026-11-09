@@ -44,4 +44,15 @@ loader/tool/prompt separation, not an OS sandbox, and the provider model is
 deprecated. Potential improvements are clearer non-overlapping correction
 contracts, evidence-calibrated objections, exact-copy report assembly and a
 stronger independently specified scoring rubric. None was implemented after
-observing benchmark results.
+observing benchmark results within that frozen benchmark.
+
+The subsequent working revision constrains each role's response schema and
+separates correction instructions. Critic index/disposition errors receive one
+bounded correction without deleting objections; Reporting corrections restore
+accepted hypotheses instead of preserving a rejected mutation. Causal guidance
+does not require intervention experiments when observations already support a
+trigger. A separately approved ten-case rerun scored 1/9 with one terminal failure;
+the original metrics remain unchanged. Six answerable cases still abstained.
+Another ranked diagnosis identified the missing response field but lost regex
+credit for saying "absence" rather than "absent"; the rubric was not loosened.
+Execution reliability improved, but diagnostic accuracy remains weak.

@@ -12,7 +12,7 @@ from agents import SCHEMAS, prompt
 from baseline import run_baseline
 from investigation import Coordinator, ModelOperation, run_multi_agent
 from llm import LLMFailure, ModelResponse, ScriptedLLM, structured_schema
-from models import ACCESS, ExecutionBudget, InitialPlan, Role, TaskSpec, ToolFamily
+from models import ACCESS, ExecutionBudget, Hypothesis, InitialPlan, Role, TaskSpec, ToolFamily
 from tools import SimulatedTools
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -137,6 +137,135 @@ def test_order_correction_retains_scores_and_real_gaps_and_only_commits_revalida
     first, second = [json.loads(call.user_prompt) for call in coordinator.model_calls]
     assert first["evidence"] == second["evidence"]
     assert first["tool_observations"] == second["tool_observations"]
+
+
+@pytest.mark.parametrize("role,key,empty_fields", [
+    (Role.OBSERVABILITY, "observability-0", ("hypotheses", "follow_ups", "objections")),
+    (Role.DEPENDENCY, "dependency-0", ("hypotheses", "follow_ups", "objections")),
+    (Role.REASONING, "reasoning-0", ("follow_ups", "objections")),
+    (Role.CRITIC, "critic-0", ("hypotheses",)),
+])
+def test_provider_schemas_constrain_roles_and_role_specific_fields(role, key, empty_fields):
+    schema = structured_schema(SCHEMAS[role])
+    assert schema["properties"]["role"]["const"] == role.value
+    for field in empty_fields:
+        assert schema["properties"][field]["maxItems"] == 0
+    rejected = replies()[key][0]
+    rejected["role"] = "reporting"
+    with pytest.raises(ValidationError):
+        SCHEMAS[role].model_validate(rejected)
+
+
+def test_critic_corrects_current_query_indices_before_any_followup_executes(tools, catalog):
+    responses = replies()
+    corrected = copy.deepcopy(responses["critic-0"][0])
+    rejected = copy.deepcopy(corrected)
+    rejected["objections"][0]["follow_up_indices"] = [99]
+    responses["critic-0"] = [rejected, corrected]
+    llm = ScriptedLLM(responses)
+    run = asyncio.run(run_multi_agent(tools, llm, catalog.incidents[0].context))
+    assert run.report.outcome == "ranked"
+    assert all(task.status == "succeeded" for task in run.trace.state.tasks)
+    assert run.trace.state.usage.tool_calls == 6
+    calls = [call for call in run.trace.model_calls if call.task_id == "critic-0"]
+    assert len(calls) == 2 and calls[1].correction_of_attempt == 1
+    feedback = json.loads(calls[1].user_prompt)["response_correction"]
+    assert "objections[0].follow_up_indices" in feedback["validation_errors"][0]
+    assert "valid indices are 0 through 0" in feedback["validation_errors"][0]
+    assert "You are still Critic, not Reasoning" in calls[1].system_prompt
+    assert "Copy hypothesis IDs" not in calls[1].system_prompt
+    assert llm.calls.index("dependency-1") > max(
+        index for index, task_id in enumerate(llm.calls) if task_id == "critic-0"
+    )
+
+
+def test_empty_critic_query_list_can_be_corrected_without_erasing_a_real_gap(tools, catalog):
+    responses = replies()
+    corrected = copy.deepcopy(responses["critic-0"][0])
+    corrected["follow_ups"] = []
+    corrected["objections"][0].update({
+        "follow_up_indices": [],
+        "unavailable_reason": "Read-only tools cannot run the required intervention experiment",
+    })
+    rejected = copy.deepcopy(corrected)
+    rejected["objections"][0]["follow_up_indices"] = [0]
+    responses["critic-0"] = [rejected, corrected]
+    responses["report"][0].update({
+        "hypotheses": copy.deepcopy(responses["reasoning-0"][0]["hypotheses"][:1]),
+        "outcome": "inconclusive",
+        "limitations": ["The required intervention observation remains unavailable"],
+    })
+    llm = ScriptedLLM(responses)
+    run = asyncio.run(run_multi_agent(tools, llm, catalog.incidents[0].context))
+    assert run.report.outcome == "inconclusive"
+    assert run.trace.termination_reason == "orchestrator_finished"
+    assert all(task.status == "succeeded" for task in run.trace.state.tasks)
+    assert run.trace.state.usage.tool_calls == 5
+    assert "reasoning-1" not in llm.calls
+    assert any("Unresolved critical objection" in item for item in run.report.limitations)
+    assert any("intervention experiment" in item for item in run.report.limitations)
+    rejected_call = next(
+        call for call in run.trace.model_calls if call.task_id == "critic-0" and call.attempt == 1
+    )
+    assert "the current list is empty" in rejected_call.error
+
+
+@pytest.mark.parametrize("change", ["delete", "noncritical", "role"])
+def test_critic_correction_cannot_hide_an_objection_or_change_roles(tools, catalog, change):
+    responses = replies()
+    valid = copy.deepcopy(responses["critic-0"][0])
+    rejected = copy.deepcopy(valid)
+    rejected["objections"][0]["follow_up_indices"] = [99]
+    corrected = copy.deepcopy(valid)
+    if change == "delete":
+        corrected["objections"] = []
+    elif change == "noncritical":
+        corrected["objections"][0]["critical"] = False
+    else:
+        corrected["role"] = "reasoning"
+    responses["critic-0"] = [rejected, corrected, valid]
+    responses["report"][0].update({
+        "hypotheses": copy.deepcopy(responses["reasoning-0"][0]["hypotheses"][:1]),
+        "outcome": "inconclusive",
+        "limitations": ["Critic validation failed; the initial candidates remain provisional"],
+    })
+    llm = ScriptedLLM(responses)
+    run = asyncio.run(run_multi_agent(tools, llm, catalog.incidents[0].context))
+    assert run.report.outcome == "inconclusive"
+    assert run.trace.termination_reason == "critic_unavailable"
+    assert llm.calls.count("critic-0") == 2
+    assert run.trace.state.usage.tool_calls == 5
+    assert "dependency-1" not in llm.calls
+    failed = next(task for task in run.trace.state.tasks if task.spec.task_id == "critic-0")
+    assert failed.status == "failed" and failed.output_json is None
+
+
+@pytest.mark.parametrize("change", ["claim", "confidence", "assumptions"])
+def test_reporting_correction_restores_accepted_analysis_not_the_rejected_candidate(tools, catalog, change):
+    responses = replies()
+    corrected = copy.deepcopy(responses["report"][0])
+    rejected = copy.deepcopy(corrected)
+    hypothesis = rejected["hypotheses"][0]
+    if change == "claim":
+        hypothesis["claim"] = "An unsupported replacement diagnosis"
+    elif change == "confidence":
+        hypothesis["confidence"] = 0.99
+    else:
+        hypothesis["assumptions"] = ["An unestablished assumption"]
+    responses["report"] = [rejected, corrected]
+    llm = ScriptedLLM(responses)
+    run = asyncio.run(run_multi_agent(tools, llm, catalog.incidents[0].context))
+    assert run.report.outcome == "ranked"
+    accepted = Hypothesis.model_validate(corrected["hypotheses"][0]).model_dump(mode="json")
+    assert run.report.hypotheses[0].model_dump(mode="json") == accepted
+    assert llm.calls.count("report") == 2
+    calls = [call for call in run.trace.model_calls if call.task_id == "report"]
+    assert calls[1].correction_of_attempt == 1
+    assert "not the rejected report" in calls[1].system_prompt
+    assert "Copy hypothesis IDs" not in calls[1].system_prompt
+    payload = json.loads(calls[1].user_prompt)
+    assert payload["current_hypotheses"][0] == accepted
+    assert json.loads(payload["response_correction"]["rejected_response"]) == rejected
 
 
 def test_ordinary_uncertainty_can_be_explicitly_reclassified_without_deletion_or_confidence_change(tools, catalog):
